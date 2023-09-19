@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[CreateAssetMenu]
 public class CuttingRecipeSO : ScriptableObject
 {
     public KitchenObjectSO Input => _input;
