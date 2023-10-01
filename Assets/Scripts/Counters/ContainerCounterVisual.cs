@@ -7,7 +7,7 @@ public class ContainerCounterVisual : MonoBehaviour
     private ContainerCounter _containerCounter;
 
     private Animator _animator;
-    private static readonly int OpenClose = Animator.StringToHash("OpenClose");
+    private static readonly int TriggerOpenClose = Animator.StringToHash("OpenClose");
 
     private void Awake()
     {
@@ -21,6 +21,6 @@ public class ContainerCounterVisual : MonoBehaviour
 
     private void OnPlayerGrabbedObject(object sender, EventArgs e)
     {
-        _animator.SetTrigger(OpenClose);
+        _animator.SetTrigger(TriggerOpenClose);
     }
 }

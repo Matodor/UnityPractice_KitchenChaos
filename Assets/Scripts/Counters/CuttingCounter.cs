@@ -1,23 +1,40 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 
-public class CuttingCounter : BaseCounter
+public class CuttingCounter : BaseCounter, IHasProgress
 {
+    public event EventHandler<IHasProgress.ProgressChangedArgs> OnProgressChanged;
+    public event EventHandler OnCut;
+
     [SerializeField]
     private CuttingRecipeSO[] _cuttingRecipesSO;
+
+    private int _cuttingProgress = 0;
 
     public override void InteractAlternate(Player player)
     {
         if (HasKitchenObject())
         {
             var kitchenObject = GetKitchenObject();
-            var output = FindRecipeOutputForInput(kitchenObject.GetKitchenObjectSO());
+            var recipe = FindCuttingRecipe(kitchenObject.GetKitchenObjectSO());
 
-            if (output != null)
+            if (recipe != null)
             {
-                kitchenObject.Destroy();
-                KitchenObject.Spawn(output, this);
+                _cuttingProgress++;
+
+                OnCut?.Invoke(this, EventArgs.Empty);
+                OnProgressChanged?.Invoke(this, new IHasProgress.ProgressChangedArgs
+                {
+                    ProgressNormalized = (float) _cuttingProgress / recipe.CuttingAmount,
+                });
+
+                if (_cuttingProgress >= recipe.CuttingAmount)
+                {
+                    kitchenObject.Destroy();
+                    KitchenObject.Spawn(recipe.Output, this);
+                }
             }
         }
     }
@@ -26,7 +43,17 @@ public class CuttingCounter : BaseCounter
     {
         if (HasKitchenObject())
         {
-            if (player.HasKitchenObject() == false)
+            if (player.HasKitchenObject())
+            {
+                if (player.GetKitchenObject() is PlateKitchenObject plateKitchenObject)
+                {
+                    if (plateKitchenObject.TryAddIngredient(GetKitchenObject().GetKitchenObjectSO()))
+                    {
+                        GetKitchenObject().Destroy();
+                    }
+                }
+            }
+            else
             {
                 GetKitchenObject().SetParent(player);
             }
@@ -37,7 +64,13 @@ public class CuttingCounter : BaseCounter
             {
                 if (HasCuttingRecipe(player.GetKitchenObject().GetKitchenObjectSO()))
                 {
+                    _cuttingProgress = 0;
+
                     player.GetKitchenObject().SetParent(this);
+                    OnProgressChanged?.Invoke(this, new IHasProgress.ProgressChangedArgs
+                    {
+                        ProgressNormalized = 0,
+                    });
                 }
             }
         }
@@ -49,8 +82,8 @@ public class CuttingCounter : BaseCounter
     }
 
     [CanBeNull]
-    private KitchenObjectSO FindRecipeOutputForInput(KitchenObjectSO input)
+    private CuttingRecipeSO FindCuttingRecipe(KitchenObjectSO input)
     {
-        return _cuttingRecipesSO.FirstOrDefault(so => so.Input == input)?.Output;
+        return _cuttingRecipesSO.FirstOrDefault(so => so.Input == input);
     }
 }
